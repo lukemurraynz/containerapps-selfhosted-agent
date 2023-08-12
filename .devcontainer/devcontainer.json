@@ -16,10 +16,23 @@
 		"ghcr.io/devcontainers-contrib/features/aztfexport:1": {
 			"version": "latest"
 		},
-		"ghcr.io/devcontainers-contrib/features/terraform-asdf:2": {
-			"version": "latest"
-		},
-		"ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:1": {}
+		"ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:1": {},
+		"ghcr.io/devcontainers/features/terraform:1": {
+			"installTFsec": true,
+			"version": "latest",
+			"tflint": "latest",
+			"terragrunt": "latest"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-azuretools.vscode-azurecontainerapps",
+				"ms-azuretools.vscode-azureresourcegroups",
+				"ms-azuretools.vscode-bicep",
+				"editorconfig.editorconfig"
+			]
+		}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
