@@ -30,7 +30,10 @@
 				"ms-azuretools.vscode-azurecontainerapps",
 				"ms-azuretools.vscode-azureresourcegroups",
 				"ms-azuretools.vscode-bicep",
-				"editorconfig.editorconfig"
+				"editorconfig.editorconfig",
+				"GitHub.copilot",
+				"GitHub.copilot-labs",
+				"BenjaminBenais.copilot-theme"
 			]
 		}
 	}
