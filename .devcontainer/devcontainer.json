@@ -37,6 +37,7 @@
 				"editorconfig.editorconfig",
 				"GitHub.copilot",
 				"GitHub.copilot-labs",
+				"GitHub.copilot-chat",
 				"BenjaminBenais.copilot-theme"
 			]
 		}
