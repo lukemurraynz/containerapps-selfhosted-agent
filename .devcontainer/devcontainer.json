@@ -27,7 +27,8 @@
 	"customizations": {
 		"vscode": {
 			"settings": {
-				"workbench.colorTheme": "BenjaminBenais.copilot-theme"
+				"workbench.colorTheme": "BenjaminBenais.copilot-theme",
+				"editor.formatOnSaveMode": "file"
 			   },
 			"extensions": [
 				"ms-azuretools.vscode-azurecontainerapps",
