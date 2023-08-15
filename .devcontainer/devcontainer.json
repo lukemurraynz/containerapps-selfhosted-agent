@@ -21,7 +21,7 @@
 			"installTFsec": true,
 			"version": "latest",
 			"tflint": "latest",
-			"terragrunt": "latest"
+			"terragrunt": "0.48.0"
 		}
 	},
 	"customizations": {
