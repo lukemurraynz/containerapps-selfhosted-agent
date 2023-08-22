@@ -3,7 +3,9 @@
 {
 	"name": "Ubuntu",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"dockerFile": "Dockerfile",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
 	"features": {
 		"ghcr.io/devcontainers/features/azure-cli:1": {
 			"installBicep": true,
