@@ -30,7 +30,8 @@
 		"vscode": {
 			"settings": {
 				"workbench.colorTheme": "BenjaminBenais.copilot-theme",
-				"editor.formatOnSaveMode": "file"
+				"editor.formatOnSaveMode": "file",
+				"bicep.experimental.deployPane": "true"
 			   },
 			"extensions": [
 				"ms-azuretools.vscode-azurecontainerapps",
