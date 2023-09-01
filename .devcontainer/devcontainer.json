@@ -15,10 +15,7 @@
 		"ghcr.io/devcontainers/features/powershell:latest": {
 			"version": "latest"
 		},
-		"ghcr.io/devcontainers-contrib/features/aztfexport:latest": {
-			"version": "latest"
-		},
-		"ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:latest": {},
+				"ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:latest": {},
 		"ghcr.io/devcontainers/features/terraform:latest": {
 			"installTFsec": true,
 			"version": "latest",
