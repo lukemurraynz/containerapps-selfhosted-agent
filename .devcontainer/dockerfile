@@ -1,1 +1,1 @@
-FROM mcr.microsoft.com/azure-powershell:latest
+FROM ubuntu:22.04
