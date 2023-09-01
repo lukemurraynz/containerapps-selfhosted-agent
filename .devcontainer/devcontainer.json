@@ -7,19 +7,19 @@
     "dockerfile": "dockerfile"
   },
 	"features": {
-		"ghcr.io/devcontainers/features/azure-cli:1": {
+		"ghcr.io/devcontainers/features/azure-cli:latest": {
 			"installBicep": true,
 			"installUsingPython": true,
 			"version": "latest"
 		},
-		"ghcr.io/devcontainers/features/powershell:1": {
+		"ghcr.io/devcontainers/features/powershell:latest": {
 			"version": "latest"
 		},
-		"ghcr.io/devcontainers-contrib/features/aztfexport:1": {
+		"ghcr.io/devcontainers-contrib/features/aztfexport:latest": {
 			"version": "latest"
 		},
-		"ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:1": {},
-		"ghcr.io/devcontainers/features/terraform:1": {
+		"ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:latest": {},
+		"ghcr.io/devcontainers/features/terraform:latest": {
 			"installTFsec": true,
 			"version": "latest",
 			"tflint": "latest",
