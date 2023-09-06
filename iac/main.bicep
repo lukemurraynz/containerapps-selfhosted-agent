@@ -38,6 +38,7 @@ resource cnapps 'Microsoft.App/managedEnvironments@2023-05-01' = {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
         customerId: law.properties.customerId
+        sharedKey:law.listkeys().primarySharedKey
 
       }
     }
@@ -60,7 +61,7 @@ resource containerregistry 'Microsoft.ContainerRegistry/registries@2023-06-01-pr
   properties: {
     publicNetworkAccess: 'Enabled'
     networkRuleBypassOptions: 'AzureServices'
-    adminUserEnabled: true
+    adminUserEnabled: false
   }
 }
 // Reference existing managed identity with contributor role.
@@ -72,7 +73,11 @@ resource usrmi 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' exi
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: 'law-uniqueid(resourceGroup().id)'
   location: location
-}
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+}}
 
 resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'acrbuild'
@@ -197,3 +202,5 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
   }
 
 }
+
+
