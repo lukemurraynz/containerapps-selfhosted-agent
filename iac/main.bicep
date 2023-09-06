@@ -1,5 +1,8 @@
 param location string = resourceGroup().location
 param utcValue string = utcNow()
+param poolName string = 'containerapp-adoagent'
+param adourl string = ''
+param token string = ''
 
 param tags object = {
   environment: 'Production'
@@ -32,8 +35,11 @@ resource cnapps 'Microsoft.App/managedEnvironments@2023-05-01' = {
   tags: tags
   properties: {
     appLogsConfiguration: {
-      destination: null
-      logAnalyticsConfiguration: null
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: law.properties.customerId
+
+      }
     }
     vnetConfiguration: {
       infrastructureSubnetId: containerappsspokevnet.properties.subnets[0].id
@@ -46,7 +52,7 @@ resource cnapps 'Microsoft.App/managedEnvironments@2023-05-01' = {
 resource containerregistry 'Microsoft.ContainerRegistry/registries@2023-06-01-preview' = {
   name: 'registrycontainerluke'
   location: location
-  
+
   tags: tags
   sku: {
     name: 'Basic'
@@ -59,10 +65,14 @@ resource containerregistry 'Microsoft.ContainerRegistry/registries@2023-06-01-pr
 }
 // Reference existing managed identity with contributor role.
 
-resource usrmi 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing =  {
-name: 'usrmi'
+resource usrmi 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: 'usrmi'
 }
 
+resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+  name: 'law-uniqueid(resourceGroup().id)'
+  location: location
+}
 
 resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'acrbuild'
@@ -90,37 +100,29 @@ resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
 
 }
 
-resource keyvault 'Microsoft.KeyVault/vaults@2023-02-01' = {
-  name: 'keyvault'
-  location:location
-  properties: {
-    sku: {
-      family:  'A'
-      name:  'standard'
-    }
-    tenantId:  subscription().tenantId
-  }
-}
-
 resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
   name: 'adoagentjob'
   location: location
+  tags: tags
 
   properties: {
     environmentId: cnapps.id
+
     configuration: {
       triggerType: 'Event'
 
       secrets: [
         {
-          name: 'AZP_TOKEN'
+          name: 'personal-access-token'
+          value: token
         }
         {
-          name: 'AZP_URL'
+          name: 'organization-url'
+          value: adourl
         }
         {
-        name: '${containerregistry.name}'
-        value: '${containerregistry.id}'
+          name: '${containerregistry.name}'
+          value: '${containerregistry.id}'
         }
       ]
       replicaTimeout: 1800
@@ -139,6 +141,8 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
 
               // https://keda.sh/docs/2.11/scalers/azure-pipelines/
               metadata: {
+                poolName: poolName
+                targetPipelinesQueueLength: '1'
               }
               auth: [
                 {
@@ -157,16 +161,39 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
       registries: [
         {
           server: containerregistry.properties.loginServer
-          username: 'lukecontregistry'
-          passwordSecretRef: 'lukecontregistryazurecrio-lukecontregistry'
+          identity: usrmi.id
         }
       ]
-      
-    }
-    
 
+    }
+    template: {
+      containers: [
+        {
+          image: '${containerregistry.properties.loginServer}/adoagent:1.0'
+          name: 'adoagent'
+          env: [
+            {
+              name: 'AZP_TOKEN'
+              secretRef: 'personal-access-token'
+            }
+            {
+              name: 'AZP_URL'
+              secretRef: 'organization-url'
+            }
+            {
+              name: 'AZP_POOL'
+              value: poolName
+            }
+
+          ]
+          resources: {
+            cpu: 2
+            memory: '4Gi'
+          }
+        }
+      ]
     }
 
   }
 
-
+}
