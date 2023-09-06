@@ -89,3 +89,8 @@ resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   }
 
 }
+
+resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
+  name: 'adoagentjob'
+  location: location
+}
