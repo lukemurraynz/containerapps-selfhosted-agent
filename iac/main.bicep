@@ -46,6 +46,7 @@ resource cnapps 'Microsoft.App/managedEnvironments@2023-05-01' = {
 resource containerregistry 'Microsoft.ContainerRegistry/registries@2023-06-01-preview' = {
   name: 'registrycontainerluke'
   location: location
+  
   tags: tags
   sku: {
     name: 'Basic'
@@ -53,16 +54,15 @@ resource containerregistry 'Microsoft.ContainerRegistry/registries@2023-06-01-pr
   properties: {
     publicNetworkAccess: 'Enabled'
     networkRuleBypassOptions: 'AzureServices'
+    adminUserEnabled: true
   }
 }
+// Reference existing managed identity with contributor role.
 
-resource usrmi 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: 'usrmi'
-  location: location
-  tags: tags
+resource usrmi 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing =  {
+name: 'usrmi'
 }
 
-// Assign managed identity contributor role.
 
 resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'acrbuild'
@@ -75,7 +75,7 @@ resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
       '${usrmi.id}': {}
     }
   }
-  
+
   properties: {
     azCliVersion: '2.9.1'
     retentionInterval: 'P1D'
@@ -90,7 +90,83 @@ resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
 
 }
 
+resource keyvault 'Microsoft.KeyVault/vaults@2023-02-01' = {
+  name: 'keyvault'
+  location:location
+  properties: {
+    sku: {
+      family:  'A'
+      name:  'standard'
+    }
+    tenantId:  subscription().tenantId
+  }
+}
+
 resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
   name: 'adoagentjob'
   location: location
-}
+
+  properties: {
+    environmentId: cnapps.id
+    configuration: {
+      triggerType: 'Event'
+
+      secrets: [
+        {
+          name: 'AZP_TOKEN'
+        }
+        {
+          name: 'AZP_URL'
+        }
+        {
+        name: '${containerregistry.name}'
+        value: '${containerregistry.id}'
+        }
+      ]
+      replicaTimeout: 1800
+      replicaRetryLimit: 1
+      eventTriggerConfig: {
+        replicaCompletionCount: 1
+        parallelism: 1
+        scale: {
+          minExecutions: 0
+          maxExecutions: 10
+          pollingInterval: 30
+          rules: [
+            {
+              name: 'azure-pipelines'
+              type: 'azure-pipelines'
+
+              // https://keda.sh/docs/2.11/scalers/azure-pipelines/
+              metadata: {
+              }
+              auth: [
+                {
+                  secretRef: 'AZP_TOKEN'
+                  triggerParameter: 'personalAccessToken'
+                }
+                {
+                  secretRef: 'AZP_URL'
+                  triggerParameter: 'organizationURL'
+                }
+              ]
+            }
+          ]
+        }
+      }
+      registries: [
+        {
+          server: containerregistry.properties.loginServer
+          username: 'lukecontregistry'
+          passwordSecretRef: 'lukecontregistryazurecrio-lukecontregistry'
+        }
+      ]
+      
+    }
+    
+
+    }
+
+  }
+
+
