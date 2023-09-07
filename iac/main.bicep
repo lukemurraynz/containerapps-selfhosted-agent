@@ -1,8 +1,8 @@
 param location string = resourceGroup().location
 param utcValue string = utcNow()
 param poolName string = 'containerapp-adoagent'
-param adourl string $adourl
-param token string = $token
+param adourl string = 
+param token string = '
 param imagename string = 'adoagent:1.0'
 param managedenvname string = 'cnapps'
 
@@ -66,7 +66,7 @@ resource containerregistry 'Microsoft.ContainerRegistry/registries@2023-06-01-pr
     adminUserEnabled: false
   }
 }
-// Reference existing managed identity with contributor role.
+// Reference existing managed identity with Owner role, due to write assignments needed for COntainer Registry.
 
 resource usrmi 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: 'usrmi'
@@ -95,7 +95,7 @@ resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   }
 
   properties: {
-    azCliVersion: '2.9.1'
+    azCliVersion: '2.50.0'
     retentionInterval: 'P1D'
     timeout: 'PT30M'
     arguments: '${containerregistry.name} ${imagename}'
@@ -121,29 +121,21 @@ resource arcplaceholder 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   }
 
   properties: {
-    azCliVersion: '2.9.1'
+    azCliVersion: '2.50.0'
     retentionInterval: 'P1D'
     timeout: 'PT30M'
-    arguments: '${containerregistry.name} ${imagename} ${poolName} ${resourceGroup().name} ${adourl} ${token} ${managedenvname}'
+    arguments: '${containerregistry.name} ${imagename} ${poolName} ${resourceGroup().name} ${adourl} ${token} ${managedenvname} ${usrmi.id}'
     scriptContent: '''
-    az extension add --name containerapp --upgrade
     az login --identity
-    az containerapp job create -n "placeholder" -g $4 --environment $7 `
-    --trigger-type Manual `
-    --replica-timeout 300 `
-    --replica-retry-limit 1 `
-    --replica-completion-count 1 `
-    --parallelism 1 `
-    --image "$1.azurecr.io/$2" `
-    --cpu "2.0" `
-    --memory "4Gi" `
-    --secrets "personal-access-token=$6" "organization-url=$5" `
-    --env-vars "AZP_TOKEN=secretref:personal-access-token" "AZP_URL=secretref:organization-url" "AZP_POOL=$AZP_POOL" "AZP_PLACEHOLDER=1" "AZP_AGENT_NAME=placeholder-agent" `
-    --registry-server "$1.azurecr.io"
-
+    az extension add --name containerapp --upgrade --only-show-errors
+    az containerapp job create -n 'placeholder' -g $4 --environment $7 --trigger-type Manual --replica-timeout 300 --replica-retry-limit 1 --replica-completion-count 1 --parallelism 1 --image "$1.azurecr.io/$2" --cpu "2.0" --memory "4Gi" --secrets "personal-access-token=$6" "organization-url=$5" --env-vars "AZP_TOKEN=secretref:personal-access-token" "AZP_URL=secretref:organization-url" "AZP_POOL=$AZP_POOL" "AZP_PLACEHOLDER=1" "AZP_AGENT_NAME=placeholder-agent" --registry-server "$1.azurecr.io" --registry-identity "$8"    
     '''
     cleanupPreference: 'OnSuccess'
   }
+  dependsOn: [
+    arcbuild
+    cnapps
+  ]
 
 }
 
