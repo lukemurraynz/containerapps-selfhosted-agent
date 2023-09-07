@@ -1,8 +1,7 @@
 param location string = resourceGroup().location
-param utcValue string = utcNow()
 param poolName string = 'containerapp-adoagent'
-param adourl string = 
-param token string = '
+param adourl string = ''
+param token string = ''
 param imagename string = 'adoagent:1.0'
 param managedenvname string = 'cnapps'
 
@@ -47,6 +46,7 @@ resource cnapps 'Microsoft.App/managedEnvironments@2023-05-01' = {
     vnetConfiguration: {
       infrastructureSubnetId: containerappsspokevnet.properties.subnets[0].id
       internal: true
+      
     }
     zoneRedundant: true
   }
@@ -80,6 +80,9 @@ resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
     sku: {
       name: 'PerGB2018'
     }
+    retentionInDays: 30
+    publicNetworkAccessForIngestion: 'Enabled'
+    publicNetworkAccessForQuery: 'Enabled'
 }}
 
 resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
@@ -128,7 +131,7 @@ resource arcplaceholder 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
     scriptContent: '''
     az login --identity
     az extension add --name containerapp --upgrade --only-show-errors
-    az containerapp job create -n 'placeholder' -g $4 --environment $7 --trigger-type Manual --replica-timeout 300 --replica-retry-limit 1 --replica-completion-count 1 --parallelism 1 --image "$1.azurecr.io/$2" --cpu "2.0" --memory "4Gi" --secrets "personal-access-token=$6" "organization-url=$5" --env-vars "AZP_TOKEN=secretref:personal-access-token" "AZP_URL=secretref:organization-url" "AZP_POOL=$AZP_POOL" "AZP_PLACEHOLDER=1" "AZP_AGENT_NAME=placeholder-agent" --registry-server "$1.azurecr.io" --registry-identity "$8"    
+    az containerapp job create -n 'placeholder' -g $4 --environment $7 --trigger-type Manual --replica-timeout 300 --replica-retry-limit 1 --replica-completion-count 1 --parallelism 1 --image "$1.azurecr.io/$2" --cpu "2.0" --memory "4Gi" --secrets "personal-access-token=$6" "organization-url=$5" --env-vars "AZP_TOKEN=secretref:personal-access-token" "AZP_URL=secretref:organization-url" "AZP_POOL=$3" "AZP_PLACEHOLDER=1" "AZP_AGENT_NAME=placeholder-agent" --registry-server "$1.azurecr.io" --registry-identity "$8"    
     '''
     cleanupPreference: 'OnSuccess'
   }
@@ -161,8 +164,12 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
           value: adourl
         }
         {
-          name: '${containerregistry.name}'
-          value: '${containerregistry.id}'
+          name: 'pool-name'
+          value: poolName
+        }
+        {
+          name: 'containerregistry-name'
+          value: containerregistry.name
         }
       ]
       replicaTimeout: 1800
@@ -193,6 +200,7 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
                   secretRef: 'AZP_URL'
                   triggerParameter: 'organizationURL'
                 }
+
               ]
             }
             
