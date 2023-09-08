@@ -1,6 +1,7 @@
 param location string = resourceGroup().location
 param poolName string = 'containerapp-adoagent'
 param adourl string = ''
+@secure()
 param token string = ''
 param imagename string = 'adoagent:1.0'
 param managedenvname string = 'cnapps'
@@ -20,15 +21,135 @@ resource containerappsspokevnet 'Microsoft.Network/virtualNetworks@2023-04-01' =
     }
     subnets: [
       {
+        name: 'sharedservices'
+        properties: {
+          addressPrefix: '10.0.0.0/24'
+        }
+      }
+      {
         name: 'containerappssnet'
         properties: {
-          addressPrefix: '10.0.0.0/23'
+          addressPrefix: '10.0.2.0/23'
 
         }
+
       }
     ]
   }
 }
+
+resource keyvault 'Microsoft.KeyVault/vaults@2023-02-01' = {
+  name: 'keyvault-ado'
+  location: location
+  tags: tags
+
+  properties: {
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    tenantId: tenant().tenantId
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Deny'
+      ipRules: []
+      virtualNetworkRules: []
+    }
+    enableRbacAuthorization: true
+    accessPolicies: []
+    publicNetworkAccess: 'Disabled'
+    enableSoftDelete: false
+    // Change SoftDelete to True for Production
+    enabledForTemplateDeployment: true
+  }
+
+}
+
+resource kvtokensecret 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  name: 'personal-access-token'
+  parent: keyvault
+  properties: {
+    value: token
+  }
+}
+resource kvadourlsecret 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  name: 'organization-url'
+  parent: keyvault
+  properties: {
+    value: adourl
+  }
+}
+resource kvprivatelink 'Microsoft.Network/privateEndpoints@2023-04-01' = {
+  name: 'pe-${(keyvault.name)}'
+  location: location
+  tags: tags
+  properties: {
+    privateLinkServiceConnections: [
+      {
+        name: 'keyvault'
+        properties: {
+          privateLinkServiceId: keyvault.id
+          groupIds: [ 'vault' ]
+        }
+      }
+    ]
+    subnet: {
+      id: containerappsspokevnet.properties.subnets[0].id
+    }
+  }
+}
+
+
+
+resource keyvaultdnszone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.vaultcore.azure.net'
+  location: 'global'
+
+}
+
+resource keyvaultprivatednszonegrp 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-04-01' = {
+name: keyvaultdnszone.name
+parent: kvprivatelink
+properties: {
+  privateDnsZoneConfigs: [
+    {
+      name: 'keyvault'
+      properties: {
+        privateDnsZoneId: keyvaultdnszone.id
+        //privateDnsZoneId: keyvault.id
+      }
+    }
+  ]
+}
+}
+ 
+
+resource keyVaultPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  name: '${uniqueString(keyvault.id)}'
+  parent: keyvaultdnszone
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: containerappsspokevnet.id
+    }
+  }
+}
+
+
+resource aarecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+  name: keyvault.name
+parent: keyvaultdnszone
+  properties: {
+    aRecords: [
+      {
+        ipv4Address: kvprivatelink.properties.customDnsConfigs[0].ipAddresses[0]
+   }
+   ]
+    ttl: 300
+  }
+}
+
 
 resource cnapps 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: managedenvname
@@ -36,19 +157,42 @@ resource cnapps 'Microsoft.App/managedEnvironments@2023-05-01' = {
   tags: tags
   properties: {
     appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: law.properties.customerId
-        sharedKey:law.listkeys().primarySharedKey
-
-      }
+      destination: 'azure-monitor'
     }
     vnetConfiguration: {
-      infrastructureSubnetId: containerappsspokevnet.properties.subnets[0].id
+      infrastructureSubnetId: containerappsspokevnet.properties.subnets[1].id
       internal: true
-      
+
     }
     zoneRedundant: true
+  }
+}
+
+resource cnappsdiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'cnappsdiag'
+  scope: cnapps
+  properties: {
+    logs: [
+
+      {
+        category: 'audit'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
   }
 }
 
@@ -83,7 +227,7 @@ resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
     retentionInDays: 30
     publicNetworkAccessForIngestion: 'Enabled'
     publicNetworkAccessForQuery: 'Enabled'
-}}
+  } }
 
 resource arcbuild 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'acrbuild'
@@ -148,7 +292,7 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
   tags: tags
 
   properties: {
-    
+
     environmentId: cnapps.id
 
     configuration: {
@@ -157,20 +301,15 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
       secrets: [
         {
           name: 'personal-access-token'
-          value: token
+          keyVaultUrl: kvtokensecret.properties.secretUri
+          identity: usrmi.id
         }
         {
           name: 'organization-url'
-          value: adourl
+          keyVaultUrl: kvadourlsecret.properties.secretUri
+          identity: usrmi.id
         }
-        {
-          name: 'pool-name'
-          value: poolName
-        }
-        {
-          name: 'containerregistry-name'
-          value: containerregistry.name
-        }
+
       ]
       replicaTimeout: 1800
       replicaRetryLimit: 1
@@ -203,7 +342,7 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
 
               ]
             }
-            
+
           ]
         }
       }
@@ -229,10 +368,7 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
               name: 'AZP_URL'
               secretRef: 'organization-url'
             }
-            {
-              name: 'AZP_POOL'
-              value: poolName
-            }
+
 
           ]
           resources: {
@@ -244,9 +380,8 @@ resource adoagentjob 'Microsoft.App/jobs@2023-05-01' = {
     }
 
   }
-dependsOn: [
-  arcplaceholder
-]
+  dependsOn: [
+    arcplaceholder
+  ]
 }
-
 
