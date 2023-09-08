@@ -328,6 +328,10 @@ identity:   {
           keyVaultUrl: kvadourlsecret.properties.secretUri
           identity: usrmi.id
         }
+        {
+          name: 'azp-pool'
+          value: poolName
+        }
       ]
       replicaTimeout: 1800
       replicaRetryLimit: 1
@@ -350,15 +354,16 @@ identity:   {
               }
               auth: [
                 {
-                  secretRef: 'AZP_TOKEN'
+                  secretRef: 'personal-access-token'
                   triggerParameter: 'personalAccessToken'
                 }
                 {
-                  secretRef: 'AZP_URL'
+                  secretRef: 'organization-url'
                   triggerParameter: 'organizationURL'
                 }
               ]
             }
+            
           ]
         }
       }
@@ -373,7 +378,7 @@ identity:   {
       containers: [
         {
           image: '${containerregistry.properties.loginServer}/adoagent:1.0'
-          name: 'adoagent:1.0'
+          name: 'adoagent'
           env: [
             {
               name: 'AZP_TOKEN'
@@ -382,6 +387,11 @@ identity:   {
             {
               name: 'AZP_URL'
               secretRef: 'organization-url'
+            }
+
+            {
+              name: 'AZP_POOL'
+              secretRef: 'azp-pool'
             }
           ]
           resources: {
