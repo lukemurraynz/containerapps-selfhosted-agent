@@ -1,6 +1,7 @@
 // Define parameters
 param location string = resourceGroup().location
 param poolName string = 'containerapp-adoagent'
+param registryprefix string = 'ado'
 param adourl string = ''
 @secure()
 param token string = ''
@@ -78,13 +79,7 @@ resource kvtokensecret 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
     value: token
   }
 }
-resource kvadourlsecret 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
-  name: 'organization-url'
-  parent: keyvault
-  properties: {
-    value: adourl
-  }
-}
+
 
 // Define Private Endpoint resource
 resource kvprivatelink 'Microsoft.Network/privateEndpoints@2023-04-01' = {
@@ -132,7 +127,7 @@ resource keyvaultprivatednszonegrp 'Microsoft.Network/privateEndpoints/privateDn
 
 // Define Private DNS Zone VNet Link resource
 resource keyVaultPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  name: '${uniqueString(keyvault.id)}'
+  name: uniqueString(keyvault.id)
   parent: keyvaultdnszone
   location: 'global'
   properties: {
@@ -198,7 +193,7 @@ resource cnappsdiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' =
 
 // Define Container Registry resource
 resource containerregistry 'Microsoft.ContainerRegistry/registries@2023-06-01-preview' = {
-  name: 'registrycontainerluke'
+  name: 'registryprefix-${uniqueString(resourceGroup().id)}'
   location: location
   tags: tags
   sku: {
@@ -325,8 +320,7 @@ identity:   {
         }
         {
           name: 'organization-url'
-          keyVaultUrl: kvadourlsecret.properties.secretUri
-          identity: usrmi.id
+         value: adourl
         }
         {
           name: 'azp-pool'
