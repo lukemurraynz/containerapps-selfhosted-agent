@@ -230,8 +230,8 @@ resource containerregistry 'Microsoft.ContainerRegistry/registries@2023-06-01-pr
     //Premium is required for private endpoint support.
   }
   properties: {
-    publicNetworkAccess: 'Enabled'
-    //Once the public network access is disabled, Instances of certain Azure services including Azure DevOps Services are currently unable to access the container registry.
+    publicNetworkAccess: 'True'
+    //Required for the Deployment Scripts to build the images. Public Network access, can be disabled after.
     networkRuleBypassOptions: 'AzureServices'
     adminUserEnabled: false
   }
