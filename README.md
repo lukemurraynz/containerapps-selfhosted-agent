@@ -9,7 +9,7 @@ This repository contains the necessary files to create an Azure DevOps build age
 
 ## Usage
 
-See blog article: [Get Ahead with Self-Hosted Agents and Container Apps Jobs]()
+See blog article: [Get Ahead with Self-Hosted Agents and Container Apps Jobs](https://luke.geek.nz/azure/Get-Ahead-with-Self-Hosted-Agents-and-Container-Apps-Jobs/)
 
 Original dockerfiles from: [Azure-Samples\container-apps-ci-cd-runner-tutorial](https://github.com/Azure-Samples/container-apps-ci-cd-runner-tutorial/tree/main)
 
